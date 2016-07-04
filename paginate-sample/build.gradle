@@ -18,7 +18,7 @@ dependencies {
     compile deps.supportv4
     compile deps.cardview
 
-    compile deps.recyclerviewanimators
+//    compile deps.recyclerviewanimators
     compile deps.smoothprogressbar
 
     compile project(':paginate')

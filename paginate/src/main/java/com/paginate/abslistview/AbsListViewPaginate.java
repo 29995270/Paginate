@@ -48,10 +48,20 @@ public final class AbsListViewPaginate extends Paginate implements EndScrollList
     }
 
     @Override
-    public void setHasMoreDataToLoad(boolean hasMoreDataToLoad) {
+    public void onLoading() {
         if (wrapperAdapter != null) {
-            wrapperAdapter.displayLoadingRow(hasMoreDataToLoad);
+            wrapperAdapter.displayLoadingRow(true);
         }
+    }
+
+    @Override
+    public void onLoadingError() {
+
+    }
+
+    @Override
+    public void onLoadingEnd() {
+
     }
 
     @Override

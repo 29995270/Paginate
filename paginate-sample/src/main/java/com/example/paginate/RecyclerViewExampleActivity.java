@@ -15,11 +15,14 @@ import android.widget.TextView;
 
 import com.example.paginate.adapter.RecyclerPersonAdapter;
 import com.example.paginate.data.DataProvider;
+import com.example.paginate.data.Person;
 import com.paginate.Paginate;
 import com.paginate.recycler.LoadingListItemCreator;
 import com.paginate.recycler.LoadingListItemSpanLookup;
 
-import jp.wasabeef.recyclerview.animators.SlideInUpAnimator;
+import java.util.ArrayList;
+
+//import jp.wasabeef.recyclerview.animators.SlideInUpAnimator;
 
 public class RecyclerViewExampleActivity extends BaseActivity implements Paginate.Callbacks {
 
@@ -48,7 +51,8 @@ public class RecyclerViewExampleActivity extends BaseActivity implements Paginat
             paginate.unbind();
         }
         handler.removeCallbacks(fakeCallback);
-        adapter = new RecyclerPersonAdapter(DataProvider.getRandomData(20));
+//        adapter = new RecyclerPersonAdapter(DataProvider.getRandomData(10));
+        adapter = new RecyclerPersonAdapter(new ArrayList<Person>());
         loading = false;
         page = 0;
 
@@ -84,13 +88,15 @@ public class RecyclerViewExampleActivity extends BaseActivity implements Paginat
         }
 
         recyclerView.setLayoutManager(layoutManager);
-        recyclerView.setItemAnimator(new SlideInUpAnimator());
+//        recyclerView.setItemAnimator(new SlideInUpAnimator());
         recyclerView.setAdapter(adapter);
 
         paginate = Paginate.with(recyclerView, this)
                 .setLoadingTriggerThreshold(threshold)
                 .addLoadingListItem(addLoadingRow)
                 .setLoadingListItemCreator(customLoadingListItem ? new CustomLoadingListItemCreator() : null)
+                .setEndListItemCreator(new CustomEndListItemCreator())
+                .setErrorListItemCreator(new CustomErrorListItemCreator())
                 .setLoadingListItemSpanSizeLookup(new LoadingListItemSpanLookup() {
                     @Override
                     public int getSpanSize() {
@@ -121,9 +127,19 @@ public class RecyclerViewExampleActivity extends BaseActivity implements Paginat
     private Runnable fakeCallback = new Runnable() {
         @Override
         public void run() {
-            page++;
-            adapter.add(DataProvider.getRandomData(itemsPerPage));
-            loading = false;
+            if (System.currentTimeMillis() % 2 == 0) {
+                paginate.onLoadingError();
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        loading = false;
+                    }
+                }, 1000);
+            } else {
+                page++;
+                adapter.add(DataProvider.getRandomData(itemsPerPage));
+                loading = false;
+            }
         }
     };
 
@@ -145,6 +161,32 @@ public class RecyclerViewExampleActivity extends BaseActivity implements Paginat
                 StaggeredGridLayoutManager.LayoutParams params = (StaggeredGridLayoutManager.LayoutParams) vh.itemView.getLayoutParams();
                 params.setFullSpan(true);
             }
+        }
+    }
+
+    private class CustomEndListItemCreator implements LoadingListItemCreator {
+        @Override
+        public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+            LayoutInflater inflater = LayoutInflater.from(parent.getContext());
+            View view = inflater.inflate(R.layout.custom_end_list_item, parent, false);
+            return new VH(view);
+        }
+
+        @Override
+        public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
+        }
+    }
+
+    private class CustomErrorListItemCreator implements LoadingListItemCreator {
+        @Override
+        public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+            LayoutInflater inflater = LayoutInflater.from(parent.getContext());
+            View view = inflater.inflate(R.layout.custom_error_list_item, parent, false);
+            return new VH(view);
+        }
+
+        @Override
+        public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
         }
     }
 

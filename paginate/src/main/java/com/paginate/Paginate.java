@@ -35,9 +35,12 @@ public abstract class Paginate {
      * automatically each time when underlying adapter data is changed. Use this method to explicitly add/remove
      * loading row.
      *
-     * @param hasMoreDataToLoad true if there is more data to load, false otherwise.
      */
-    abstract public void setHasMoreDataToLoad(boolean hasMoreDataToLoad);
+    abstract public void onLoading();
+
+    abstract public void onLoadingError();
+
+    abstract public void onLoadingEnd();
 
     /**
      * Call unbind to detach list (RecyclerView or AbsListView) from Paginate when pagination functionality is no

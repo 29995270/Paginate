@@ -15,11 +15,15 @@ public final class RecyclerPaginate extends Paginate {
     private WrapperAdapter wrapperAdapter;
     private WrapperSpanSizeLookup wrapperSpanSizeLookup;
 
+    private int[] mDxy = new int[2];
+
     RecyclerPaginate(RecyclerView recyclerView,
                      Paginate.Callbacks callbacks,
                      int loadingTriggerThreshold,
                      boolean addLoadingListItem,
                      LoadingListItemCreator loadingListItemCreator,
+                     LoadingListItemCreator errorListItemCreator,
+                     LoadingListItemCreator endListItemCreator,
                      LoadingListItemSpanLookup loadingListItemSpanLookup) {
         this.recyclerView = recyclerView;
         this.callbacks = callbacks;
@@ -31,7 +35,7 @@ public final class RecyclerPaginate extends Paginate {
         if (addLoadingListItem) {
             // Wrap existing adapter with new adapter that will add loading row
             RecyclerView.Adapter adapter = recyclerView.getAdapter();
-            wrapperAdapter = new WrapperAdapter(adapter, loadingListItemCreator);
+            wrapperAdapter = new WrapperAdapter(adapter, loadingListItemCreator, errorListItemCreator, endListItemCreator);
             adapter.registerAdapterDataObserver(mDataObserver);
             recyclerView.setAdapter(wrapperAdapter);
 
@@ -47,13 +51,27 @@ public final class RecyclerPaginate extends Paginate {
 
         // Trigger initial check since adapter might not have any items initially so no scrolling events upon
         // RecyclerView (that triggers check) will occur
-        checkEndOffset();
+        checkEndOffset(null);
     }
 
     @Override
-    public void setHasMoreDataToLoad(boolean hasMoreDataToLoad) {
+    public void onLoading() {
         if (wrapperAdapter != null) {
-            wrapperAdapter.displayLoadingRow(hasMoreDataToLoad);
+            wrapperAdapter.displayFooterRow(true, false, false);
+        }
+    }
+
+    @Override
+    public void onLoadingError() {
+        if (wrapperAdapter != null) {
+            wrapperAdapter.displayFooterRow(false, true, false);
+        }
+    }
+
+    @Override
+    public void onLoadingEnd() {
+        if (wrapperAdapter != null) {
+            wrapperAdapter.displayFooterRow(false, false, true);
         }
     }
 
@@ -73,8 +91,8 @@ public final class RecyclerPaginate extends Paginate {
         }
     }
 
-    void checkEndOffset() {
-        int visibleItemCount = recyclerView.getChildCount();
+    synchronized void checkEndOffset(int[] dXdY) {
+        int visibleItemCount = recyclerView.getChildCount(); // return 1 or 0, notify animating (first page can not fill full screen, check end offset , but recyclerView have not layout change)
         int totalItemCount = recyclerView.getLayoutManager().getItemCount();
 
         int firstVisibleItemPosition;
@@ -94,6 +112,9 @@ public final class RecyclerPaginate extends Paginate {
         // Check if end of the list is reached (counting threshold) or if there is no items at all
         if ((totalItemCount - visibleItemCount) <= (firstVisibleItemPosition + loadingTriggerThreshold)
                 || totalItemCount == 0) {
+
+            if (dXdY != null && (dXdY[0] == 0 && dXdY[1] == 0)) return; //avoid notify to dispatch scroll event(not finger touch)
+
             // Call load more only if loading is not currently in progress and if there is more items to load
             if (!callbacks.isLoading() && !callbacks.hasLoadedAllItems()) {
                 callbacks.onLoadMore();
@@ -102,14 +123,23 @@ public final class RecyclerPaginate extends Paginate {
     }
 
     private void onAdapterDataChanged() {
-        wrapperAdapter.displayLoadingRow(!callbacks.hasLoadedAllItems());
-        checkEndOffset();
+        if (wrapperAdapter != null) {
+            wrapperAdapter.displayFooterRow(!callbacks.hasLoadedAllItems(), false, callbacks.hasLoadedAllItems());
+        }
+        checkEndOffset(null);
     }
 
     private final RecyclerView.OnScrollListener mOnScrollListener = new RecyclerView.OnScrollListener() {
         @Override
         public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
-            checkEndOffset(); // Each time when list is scrolled check if end of the list is reached
+            mDxy[0] = dx;
+            mDxy[1] = dy;
+            checkEndOffset(mDxy); // Each time when list is scrolled check if end of the list is reached
+        }
+
+        @Override
+        public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+            checkEndOffset(null);  // some case (error holder retry)
         }
     };
 
@@ -159,6 +189,8 @@ public final class RecyclerPaginate extends Paginate {
         private int loadingTriggerThreshold = 5;
         private boolean addLoadingListItem = true;
         private LoadingListItemCreator loadingListItemCreator;
+        private LoadingListItemCreator errorListItemCreator;
+        private LoadingListItemCreator endListItemCreator;
         private LoadingListItemSpanLookup loadingListItemSpanLookup;
 
         public Builder(RecyclerView recyclerView, Paginate.Callbacks callbacks) {
@@ -206,6 +238,28 @@ public final class RecyclerPaginate extends Paginate {
         }
 
         /**
+         * Set custom error list item creator. If no creator is set , error will not show as a item.
+         *
+         * @param creator Creator that will ne called for inflating and binding error list item.
+         * @return {@link com.paginate.recycler.RecyclerPaginate.Builder}
+         */
+        public Builder setErrorListItemCreator(LoadingListItemCreator creator) {
+            this.errorListItemCreator = creator;
+            return this;
+        }
+
+        /**
+         * Set custom end list item creator. If no creator is set , end will not show as a item.
+         *
+         * @param creator Creator that will ne called for inflating and binding end list item.
+         * @return {@link com.paginate.recycler.RecyclerPaginate.Builder}
+         */
+        public Builder setEndListItemCreator(LoadingListItemCreator creator) {
+            this.endListItemCreator = creator;
+            return this;
+        }
+
+        /**
          * Set custom SpanSizeLookup for loading list item. Use this when {@link GridLayoutManager} is used and
          * loading list item needs to have custom span. Full span of {@link GridLayoutManager} is used by default.
          *
@@ -239,7 +293,7 @@ public final class RecyclerPaginate extends Paginate {
             }
 
             return new RecyclerPaginate(recyclerView, callbacks, loadingTriggerThreshold, addLoadingListItem,
-                    loadingListItemCreator, loadingListItemSpanLookup);
+                    loadingListItemCreator, errorListItemCreator, endListItemCreator, loadingListItemSpanLookup);
         }
     }
 
