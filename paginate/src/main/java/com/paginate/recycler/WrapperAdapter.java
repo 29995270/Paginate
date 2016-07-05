@@ -104,11 +104,22 @@ class WrapperAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     void displayFooterRow(boolean displayLoadingRow, boolean displayErrorRow, boolean displayEndRow) {
+        int footerCount = (this.displayLoadingRow || this.displayErrorRow || this.displayEndRow)? 1: 0;
         if (this.displayLoadingRow != displayLoadingRow || this.displayErrorRow != displayErrorRow || this.displayEndRow != displayEndRow) {
             this.displayLoadingRow = displayLoadingRow;
             this.displayErrorRow = displayErrorRow && errorListItemCreator != null;
             this.displayEndRow = displayEndRow && endListItemCreator != null;
-            notifyDataSetChanged();
+
+            int newFooterCount = (displayLoadingRow || displayErrorRow || displayEndRow)? 1: 0;
+            notifyFooter(footerCount != newFooterCount);
+        }
+    }
+
+    void notifyFooter(boolean addOrChange) {
+        if (addOrChange) {
+            notifyItemInserted(getItemCount() - 1);
+        } else {
+            notifyItemChanged(getLoadingRowPosition());
         }
     }
 

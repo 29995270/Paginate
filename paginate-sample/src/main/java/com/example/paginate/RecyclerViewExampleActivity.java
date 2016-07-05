@@ -127,7 +127,7 @@ public class RecyclerViewExampleActivity extends BaseActivity implements Paginat
     private Runnable fakeCallback = new Runnable() {
         @Override
         public void run() {
-            if (System.currentTimeMillis() % 2 == 0) {
+            if (System.currentTimeMillis() % 2 == 0 && page > 0) {
                 paginate.onLoadingError();
                 handler.postDelayed(new Runnable() {
                     @Override
