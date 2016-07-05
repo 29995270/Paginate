@@ -15,12 +15,15 @@ provided)
 will use full span)
 * Custom loading trigger threshold
 * Support `RecyclerView` (using linear, grid and staggered `LayoutManager`) and `AbsListView` (`ListView` | `GridView`)
+* **2016/7/5 by freeze**  add some feature like error page footer , end page footer.(do not work with AbsListView)
 
 Demo
 --------
 For a working implementation of this project see the `paginate-sample/` folder.
 
 <img src="art/demo.gif">
+**2016/7/5 by freeze**
+<img src="art/demo2.gif">
 
 Setup
 --------
